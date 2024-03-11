@@ -1,0 +1,33 @@
+To build TrustZone on raspberry pi 3 follow the steps mentioned here https://optee.readthedocs.io/en/latest/building/gits/build.html#get-and-build-the-solution
+
+For step 1-Prerequisites you have to install docker but before that uninstall all conflicting packages by running the following command "for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done"
+
+then install docker by running the following commands:
+
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  
+sudo apt-get update
+
+
+then to verify the installation run the following command "sudo docker run hello-world"
+
+after installing docker copy and paste the Prerequisites in text file and name it "Dockerfile" in your project directory then run the following command "docker build -t optee-build ." you might get errors if you skipped the dot
+
+now i will talk about some errors i encountered:
+
+if you found this error after step 1 (ERROR: failed to solve: process "/bin/sh -c make -j$(nproc) check" did not complete successfully: exit code: 2) change the last line to "make -j1 check"
+
+in step 3 if you encountered this error after third command (fatal: cannot obtain manifest https://github.com/OP-TEE/manifest.git) then you propably declared your repo account (step 2) in a different directory
+
+if you encountered errors in step 5 you might have to install gcc by running the command "sudo apt install gcc" and install flex by running "sudo apt install flex" then install bison by running "sudo apt install bison" install flex before bison to avoid possible errors
+
+also for step 5 you might need to install OpenSSL development package by running "sudo apt install libssl-dev"
