@@ -90,7 +90,7 @@ int main() {
 
             char command[BUFFER_SIZE];
             while (1) {
-                printf("Enter command ('r', 'h', 'l', 's', or 'q'): ");
+                printf("Enter command ('r','s', or 'q'): ");
                 fgets(command, BUFFER_SIZE, stdin);
                 command[strcspn(command, "\n")] = '\0'; // Remove newline character
 
@@ -98,9 +98,18 @@ int main() {
                 SSL_write(ssl, command, strlen(command));
 
                 // Check if it's time to quit
-                if (strcmp(command, "quit") == 0) {
-                    break;
+                if (strcmp(command, "q") == 0) {
+                    return 0;
                 }
+                else if (strcmp(command, "r") == 0){
+                  printf("Enter h ir l");
+                  fgets(command, BUFFER_SIZE, stdin);
+                command[strcspn(command, "\n")] = '\0';
+                SSL_write(ssl, command, strlen(command));
+
+                  
+                  
+                  }
             }
 
             SSL_shutdown(ssl);
