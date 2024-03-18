@@ -1,0 +1,181 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <pigpio.h>
+#include "mfk.h"
+#include <stdint.h>
+#include <pthread.h>
+
+#define PORT1 12345
+#define PORT2 12346
+#define BUFFER_SIZE 1024
+
+const int IN1 = 24;
+const int IN2 = 23;
+const int ENA = 25;
+
+char secret1[SHA256_DIGEST_LENGTH * 2 + 1];
+char secret2[SHA256_DIGEST_LENGTH * 2 + 1];
+SSL *ssl1; // SSL object for server 1
+SSL *ssl2; // SSL object for server 2
+uintptr_t G1;
+uintptr_t G2;
+
+void init_openssl() {
+    SSL_library_init();
+    OpenSSL_add_ssl_algorithms();
+    SSL_load_error_strings();
+}
+
+SSL_CTX* create_context() {
+    const SSL_METHOD *method;
+    SSL_CTX *ctx;
+
+    method = TLS_client_method(); // Use TLS_client_method() as SSLv23_client_method() is deprecated
+    ctx = SSL_CTX_new(method);
+
+    if (!ctx) {
+        perror("Unable to create SSL context");
+        ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
+    }
+
+    return ctx;
+}
+
+void handleErrorWithSSL(const char* message) {
+    perror(message);
+    ERR_print_errors_fp(stderr);
+    exit(EXIT_FAILURE);
+}
+
+void startMotor() {
+    gpioWrite(IN1, 1);
+    gpioWrite(IN2, 0);
+    if (SSL_write(ssl1, secret1, strlen(secret1)) <= 0) {
+        handleErrorWithSSL("SSL_write failed in startMotor for server 1");
+    }
+    if (SSL_write(ssl2, secret2, strlen(secret2)) <= 0) {
+        handleErrorWithSSL("SSL_write failed in startMotor for server 2");
+    }
+}
+
+// Define other motor functions here similarly...
+
+void stopMotor() {
+    gpioWrite(IN1, 0);
+    gpioWrite(IN2, 0);
+    gpioWrite(ENA, 0);
+    if (SSL_write(ssl1, secret1, strlen(secret1)) <= 0) {
+        handleErrorWithSSL("SSL_write failed in stopMotor for server 1");
+    }
+    if (SSL_write(ssl2, secret2, strlen(secret2)) <= 0) {
+        handleErrorWithSSL("SSL_write failed in stopMotor for server 2");
+    }
+}
+
+void *handle_server1(void *arg) {
+    while (1) {
+        char buffer[BUFFER_SIZE];
+        int bytes_received = SSL_read(ssl1, buffer, sizeof(buffer) - 1);
+        if (bytes_received <= 0) {
+            break;
+        }
+        buffer[bytes_received] = '\0';
+        // Process message received from server 1
+    }
+    return NULL;
+}
+
+void *handle_server2(void *arg) {
+    while (1) {
+        char buffer[BUFFER_SIZE];
+        int bytes_received = SSL_read(ssl2, buffer, sizeof(buffer) - 1);
+        if (bytes_received <= 0) {
+            break;
+        }
+        buffer[bytes_received] = '\0';
+        // Process message received from server 2
+    }
+    return NULL;
+}
+
+int main() {
+    struct sockaddr_in server_addr1, server_addr2;
+    init_openssl();
+    SSL_CTX *ctx = create_context();
+
+    int sock1 = socket(AF_INET, SOCK_STREAM, 0);
+    int sock2 = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock1 < 0 || sock2 < 0) {
+        handleErrorWithSSL("Socket creation failed");
+    }
+
+    memset(&server_addr1, 0, sizeof(server_addr1));
+    memset(&server_addr2, 0, sizeof(server_addr2));
+    server_addr1.sin_family = AF_INET;
+    server_addr1.sin_port = htons(PORT1);
+    server_addr2.sin_family = AF_INET;
+    server_addr2.sin_port = htons(PORT2);
+
+    if (inet_pton(AF_INET, "127.0.0.1", &server_addr1.sin_addr) <= 0 ||
+        inet_pton(AF_INET, "127.0.0.1", &server_addr2.sin_addr) <= 0) {
+        handleErrorWithSSL("Invalid address/ Address not supported");
+    }
+
+    if (connect(sock1, (struct sockaddr *)&server_addr1, sizeof(server_addr1)) < 0 ||
+        connect(sock2, (struct sockaddr *)&server_addr2, sizeof(server_addr2)) < 0) {
+        handleErrorWithSSL("Connection failed");
+    }
+
+    ssl1 = SSL_new(ctx);
+    ssl2 = SSL_new(ctx);
+    SSL_set_fd(ssl1, sock1);
+    SSL_set_fd(ssl2, sock2);
+
+    if (SSL_connect(ssl1) != 1 || SSL_connect(ssl2) != 1) {
+        handleErrorWithSSL("SSL_connect failed");
+    }
+
+    if (gpioInitialise() < 0) {
+        handleErrorWithSSL("pigpio initialisation failed");
+    }
+    gpioSetMode(IN1, PI_OUTPUT);
+    gpioSetMode(IN2, PI_OUTPUT);
+    gpioSetMode(ENA, PI_OUTPUT);
+
+    pthread_t thread1, thread2;
+    pthread_create(&thread1, NULL, handle_server1, NULL);
+    pthread_create(&thread2, NULL, handle_server2, NULL);
+
+    while (1) {
+        printf("Enter command ('start', 'stop', or 'quit'): ");
+        char command[10];
+        scanf("%s", command);
+        if (strcmp(command, "start") == 0) {
+            startMotor();
+        } else if (strcmp(command, "stop") == 0) {
+            stopMotor();
+        } else if (strcmp(command, "quit") == 0) {
+            break;
+        } else {
+            printf("Invalid command\n");
+        }
+    }
+
+    SSL_shutdown(ssl1);
+    SSL_shutdown(ssl2);
+    SSL_free(ssl1);
+    SSL_free(ssl2);
+    close(sock1);
+    close(sock2);
+    SSL_CTX_free(ctx);
+    cleanup_openssl();
+    gpioTerminate();
+
+    return 0;
+}
