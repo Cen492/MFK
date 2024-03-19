@@ -190,11 +190,11 @@ int main() {
 #include <arpa/inet.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <poll.h> // Include this header for poll()
 #include "mfk.h"
 
-#define PORT 12345
 #define BUFFER_SIZE 1024
-
+int G;
 void init_openssl() {
     SSL_library_init();
     SSL_load_error_strings();
@@ -204,7 +204,7 @@ SSL_CTX* create_context() {
     const SSL_METHOD *method;
     SSL_CTX *ctx;
 
-    method = SSLv23_server_method();
+    method = SSLv23_client_method();
     ctx = SSL_CTX_new(method);
 
     if (!ctx) {
@@ -216,21 +216,6 @@ SSL_CTX* create_context() {
     return ctx;
 }
 
-void configure_context(SSL_CTX *ctx) {
-    SSL_CTX_set_ecdh_auto(ctx, 1);
-
-    if (SSL_CTX_use_certificate_file(ctx, "server.crt", SSL_FILETYPE_PEM) <= 0) {
-        ERR_print_errors_fp(stderr);
-        exit(EXIT_FAILURE);
-    }
-
-    if (SSL_CTX_use_PrivateKey_file(ctx, "server.key", SSL_FILETYPE_PEM) <= 0) {
-        ERR_print_errors_fp(stderr);
-        exit(EXIT_FAILURE);
-    }
-}
-
-
 void calculateSum(int n, SSL *ssl, char secret[]) {
     int G = 2;
     int sum = 0;
@@ -240,7 +225,7 @@ void calculateSum(int n, SSL *ssl, char secret[]) {
     }
 
     strcpy(secret, check(secret, G));
-
+    SSL_write(ssl, secret, strlen(secret));
 }
 
 void calculateSub(int n, SSL *ssl, char secret[]) {
@@ -252,123 +237,111 @@ void calculateSub(int n, SSL *ssl, char secret[]) {
     }
 
     strcpy(secret, check(secret, G));
-
+    SSL_write(ssl, secret, strlen(secret));
 }
 
 int main() {
-    int server_fd, client_fd;
-    struct sockaddr_in server_addr, client_addr;
-    socklen_t addr_len = sizeof(client_addr);
+    const int num_servers = 2; // Set the number of servers here
+    int client_fd[num_servers];
+    struct sockaddr_in server_addr[num_servers];
+    SSL *ssl[num_servers];
+    char secret[num_servers][SHA256_DIGEST_LENGTH * 2 + 1];
 
     init_openssl();
     SSL_CTX *ctx = create_context();
-    configure_context(ctx);
 
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("Socket creation failed");
-        exit(EXIT_FAILURE);
-    }
+    // Define server addresses and ports
+    char *server_ips[num_servers];
+    server_ips[0] = "127.0.0.1";
+    server_ips[1] = "192.168.0.124";
 
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(PORT);
+    int server_ports[num_servers];
+    server_ports[0] = 12345;
+    server_ports[1] = 12346;
 
-    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Bind failed");
-        exit(EXIT_FAILURE);
-    }
-
-    if (listen(server_fd, 3) < 0) {
-        perror("Listen failed");
-        exit(EXIT_FAILURE);
-    }
-
-    fprintf(stdout, "Server listening on port %d...\n", PORT);
-    fflush(stdout);
-
-
-
-    while (1) {
-
-
-        if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &addr_len)) < 0) {
-            perror("Accept failed");
+    // Connect to each server
+    for (int i = 0; i < num_servers; i++) {
+        if ((client_fd[i] = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+            perror("Socket creation failed");
             exit(EXIT_FAILURE);
         }
 
-        SSL *ssl = SSL_new(ctx);
-        SSL_set_fd(ssl, client_fd);
+        server_addr[i].sin_family = AF_INET;
+        server_addr[i].sin_port = htons(server_ports[i]);
 
-        if (SSL_accept(ssl) <= 0) {
-            ERR_print_errors_fp(stderr);
-        } else {
-            fprintf(stdout, "SSL connection established!\n");
-            fflush(stdout);
-
-            // Loop for two-way communication
-            while (1) {
-            char secret[SHA256_DIGEST_LENGTH * 2 + 1];  // Array to store SHA-256 hash
-   		 int G=0;
-   		 strcpy(secret, "9");
-                char buffer[BUFFER_SIZE];
-                int bytes_received;
-
-                // Set value of bytes_send directly in the code
-                int bytes_send = 1;
-
-                // Send a message to the client
-                const char* message = "1";
-                SSL_write(ssl, message, strlen(message) + 1);
-
-                // Receive message from the client
-                bytes_received = SSL_read(ssl, buffer, sizeof(buffer) - 1);
-                if (bytes_received <= 0) {
-                    break; // Connection closed by the client
-                }
-                buffer[bytes_received] = '\0';
-
-                // Print what the server receives
-                fprintf(stdout, "Received from client: %s\n", buffer);
-                fflush(stdout);
-                sleep(2);
-
-
-
-
-                if (bytes_send == 0) {
-
-                    G = 1;
-                    strcpy(secret, check(secret, G));
-
-                    calculateSub(20, ssl, secret);
-                }
-
-                 if (bytes_send == 1) {
-                    G = 3;
-                    strcpy(secret, check(secret, G));
-
-                    calculateSum(10, ssl, secret);
-                }
-
-
-                if (strcmp(secret, buffer) == 0) {
-                    fprintf(stdout, "Right : %s\n", secret);
-                    fflush(stdout);
-                } else {
-                    fprintf(stdout, "Hacked : %s\n", secret);
-                    fflush(stdout);
-                }
-
-            }
-
-            SSL_shutdown(ssl);
-            SSL_free(ssl);
+        if (inet_pton(AF_INET, server_ips[i], &server_addr[i].sin_addr) <= 0) {
+            perror("Invalid address/Address not supported");
+            exit(EXIT_FAILURE);
         }
 
-        close(client_fd);
+        if (connect(client_fd[i], (struct sockaddr *)&server_addr[i], sizeof(server_addr[i])) < 0) {
+            perror("Connection failed");
+            exit(EXIT_FAILURE);
+        }
+
+        ssl[i] = SSL_new(ctx);
+        SSL_set_fd(ssl[i], client_fd[i]);
+
+        if (SSL_connect(ssl[i]) <= 0) {
+            ERR_print_errors_fp(stderr);
+            exit(EXIT_FAILURE);
+        } else {
+            printf("SSL connection established with server %d\n", i + 1);
+        }
+
+
+
     }
 
-    close(server_fd);
+    // Prepare for poll
+    struct pollfd fds[num_servers];
+    for (int i = 0; i < num_servers; i++) {
+        fds[i].fd = client_fd[i];
+        fds[i].events = POLLIN;
+    }
+
+    while (1) {
+            for (int i = 0; i < num_servers; i++) {
+        strcpy(secret[i], "9"); // Reset secret to "9" for each server
+        fds[i].fd = client_fd[i];
+        fds[i].events = POLLIN;
+    }
+        int ret = poll(fds, num_servers, -1); // Wait indefinitely for activity
+
+        if (ret < 0) {
+            perror("poll() failed");
+            break;
+        }
+
+        for (int i = 0; i < num_servers; i++) {
+            if (fds[i].revents & POLLIN) {
+                char message[BUFFER_SIZE];
+                int bytes_received = SSL_read(ssl[i], message, sizeof(message) - 1);
+                if (bytes_received <= 0) {
+                    // Connection closed or error occurred
+                    break;
+                }
+                message[bytes_received] = '\0';
+                printf("Received from server %d: %s\n", i + 1, message);
+
+                if (strcmp(message, "0") == 0) {
+                           G = 1;
+                    strcpy(secret[i], check(secret[i], G));
+                    calculateSub(20, ssl[i], secret[i]);
+                } else if (strcmp(message, "1") == 0) {
+                           G = 3;
+                    strcpy(secret[i], check(secret[i], G));
+                    calculateSum(20, ssl[i], secret[i]);
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < num_servers; i++) {
+        SSL_shutdown(ssl[i]);
+        SSL_free(ssl[i]);
+        close(client_fd[i]);
+    }
     SSL_CTX_free(ctx);
     EVP_cleanup();
     return 0;
