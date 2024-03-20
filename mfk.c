@@ -24,12 +24,12 @@ char* sha256(const char* data) {
     return hash;
 }
 
-char* check(const char* arg1, int arg2) {
+char* check(const char* arg1, const char* arg2) {
     // Concatenate the integer arg2 to the input string arg1
-    char result[256]; 
-    snprintf(result, sizeof(result), "%s%d", arg1, arg2);
+    char result[256];  // Adjust the size accordingly
+    snprintf(result, sizeof(result), "%s%s", arg1, arg2);
 
-    
+    // Allocate memory for the result string
     char* hashResult = sha256(result);
 
     return hashResult;
