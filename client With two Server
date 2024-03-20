@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include <poll.h> // Include this header for poll()
+#include <poll.h> 
 #include "mfk.h"
 #include <pigpio.h>
 #include <pthread.h>
@@ -97,7 +97,7 @@ int main() {
     gpioSetMode(IN2, PI_OUTPUT);
     gpioSetMode(ENA, PI_OUTPUT);
     
-    const int num_servers = 2; // Set the number of servers here
+    const int num_servers = 2; 
     int client_fd[num_servers];
     struct sockaddr_in server_addr[num_servers];
     SSL *ssl[num_servers];
@@ -166,7 +166,7 @@ int main() {
         fds[i].fd = client_fd[i];
         fds[i].events = POLLIN;
     }
-        int ret = poll(fds, num_servers, -1); // Wait indefinitely for activity
+        int ret = poll(fds, num_servers, -1); 
 
         if (ret < 0) {
             perror("poll() failed");
