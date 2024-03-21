@@ -159,7 +159,7 @@ int main() {
    
     while (1) {
         char secret[num_servers][SHA256_DIGEST_LENGTH *2 +1];
-        char* a="9";
+        char* a;
         strcpy(dest_str,"");
         for (int i = 0; i < num_servers; i++) {
         strcpy(secret[i], "9"); // Reset secret to "9" for each server
