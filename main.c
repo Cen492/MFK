@@ -6,13 +6,16 @@
 #include <aes_ta.h>
 
 #define MAX_INPUT_LENGTH 256
-#define HASH_SIZE 32 
+#define HASH_SIZE 32 // Size of SHA-256 hash in bytes
 
+// TEE resources
 struct test_ctx {
     TEEC_Context ctx;
     TEEC_Session sess;
 };
 unsigned char hash[HASH_SIZE];
+char dest_str[256];
+
 
 const int IN1 = 24;
 const int IN2 = 23;
@@ -62,25 +65,30 @@ void concatenate_and_hash(struct test_ctx *ctx, const char *input1, const char *
     uint32_t origin;
     TEEC_Result res;
 
+    // Prepare the operation for the Trusted Application (TA)
     memset(&op, 0, sizeof(op));
     op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT,
                                      TEEC_MEMREF_TEMP_INPUT,
                                      TEEC_MEMREF_TEMP_OUTPUT,
                                      TEEC_NONE);
 
+    // Set the input parameters
     op.params[0].tmpref.buffer = (void*)input1;
     op.params[0].tmpref.size = strlen(input1);
     op.params[1].tmpref.buffer = (void*)input2;
     op.params[1].tmpref.size = strlen(input2);
 
+    // Initialize output buffer for hash
     op.params[2].tmpref.buffer = hash;
     op.params[2].tmpref.size = HASH_SIZE;
 
+    // Invoke the command to concatenate and hash the inputs
     res = TEEC_InvokeCommand(&ctx->sess, TA_AES_CMD_HASH, &op, &origin);
     if (res != TEEC_SUCCESS) {
         errx(1, "TEEC_InvokeCommand failed with code 0x%x origin 0x%x", res, origin);
     }
 
+    // Print the hashed result from the TA in binary format
     printf("Concatenated and hashed result in binary:\n");
     for (size_t i = 0; i < HASH_SIZE; i++) {
         printf("%02X ", hash[i]); // Print each byte as a hexadecimal value
@@ -90,8 +98,6 @@ void concatenate_and_hash(struct test_ctx *ctx, const char *input1, const char *
 
 int main(void) {
     struct test_ctx ctx;
-    char input1[MAX_INPUT_LENGTH] = "";  // Assigning value to input1
-    char input2[MAX_INPUT_LENGTH] = "";  // Assigning value to input2
 
     printf("Preparing TEE session...\n");
     prepare_tee_session(&ctx);
@@ -113,32 +119,32 @@ if (gpioInitialise() < 0) {
   char choice;
 
   while (1) {
-    printf("Press r for forward, h for high speed, l for low speed, e for stop and exit: ");
+    printf("Press r for run, e for stop and exit: ");
     scanf(" %c", &choice);
+    strcpy(hash, "G");
 
     if (choice == 'r') {
       startMotor();
-      strcpy(input1, "start");
-      strcpy(input2, "motor");
-      concatenate_and_hash(&ctx, input1, input2);
+      memcpy(dest_str,(void *)&startMotor,156) ;
+      concatenate_and_hash(&ctx, hash, dest_str);
       printf("Motor started forward\n");
-    } else if (choice == 'h') {
+      printf("Press h for high speed, l for low speed: ");
+      scanf(" %c", &choice);
+    	 if (choice == 'h') {
       setSpeed(100);  // Adjust high speed value as needed
-      strcpy(input1, "high");
-      strcpy(input2, hash);
-    	concatenate_and_hash(&ctx, input1, input2);
+      memcpy(dest_str,(void *)&setSpeed,156) ;
+      concatenate_and_hash(&ctx, hash, dest_str);
       printf("Motor set to high speed\n");
-    } else if (choice == 'l') {
+    } 	else if (choice == 'l') {
       setSpeed(50);   // Adjust low speed value as needed
-      strcpy(input1, "low");
-      strcpy(input2, hash);
-      concatenate_and_hash(&ctx, input1, input2);
+      memcpy(dest_str,(void *)&setSpeed,156) ;
+      concatenate_and_hash(&ctx, hash, dest_str);
       printf("Motor set to low speed\n");
+      }
     } else if (choice == 'e') {
       stopMotor();
-      strcpy(input1, "stop");
-      strcpy(input2, "motor");
-      concatenate_and_hash(&ctx, input1, input2);
+      memcpy(dest_str,(void *)&stopMotor,156) ;
+      concatenate_and_hash(&ctx, hash, dest_str);
       printf("Motor stopped\n");
       gpioTerminate();
       return 0;  // Exit the program
@@ -146,7 +152,10 @@ if (gpioInitialise() < 0) {
       printf("Invalid choice\n");
     }
   }
+    printf("Terminating TEE session...\n");
+    terminate_tee_session(&ctx);
 
     return 0;
 }
+
 
