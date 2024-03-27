@@ -13,7 +13,6 @@
 char Mcode[4096];
 #define BUFFER_SIZE 1024
 char message[BUFFER_SIZE];
-char buffer[64];
 char secret[SHA256_DIGEST_LENGTH *2 +1];
 
 // Motor control pins
@@ -90,6 +89,8 @@ void highSpeed(SSL *ssl, char secret[], int server_number) {
 }
 
 int main() {
+  char buffer[64];
+
    // GPIO library initialization and motor control pin setup
    if (gpioInitialise() < 0) {
     fprintf(stderr, "pigpio initialisation failed\n");
