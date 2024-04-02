@@ -6,7 +6,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-#define PORT 12345
+#define PORT 12346
 #define BUFFER_SIZE 1024
 
 void init_openssl() {
@@ -92,7 +92,6 @@ int main() {
 
             char command[BUFFER_SIZE];
             while (1) {
-                printf("Enter command ('r' , 's', or 'q'): ");
                 fgets(command, BUFFER_SIZE, stdin);
                 command[strcspn(command, "\n")] = '\0'; // Remove newline character
 
@@ -100,85 +99,37 @@ int main() {
                 SSL_write(ssl, command, strlen(command));
 
                 // Check if it's time to quit
-                if (strcmp(command, "quit") == 0) {
-                    break;
-
-                }
 
             bytes_received =   SSL_read(ssl,buffer,sizeof(buffer)-1);
             buffer[bytes_received]= '\0';
             printf("recived from client: %s\n",buffer);
 
-            if(strcmp(command, "s") == 0){
-
-                if(strcmp(buffer, "1c63363333363333333333363333333333333333333333363333333333333333") == 0){
+                if(strcmp(buffer, "8a61363133363331333333363333333133333333333333363333333333333331") == 0){
                     printf("Safe\n");
 
                 }
-                else{
-                    printf("Hacked\n");
-                    break;
-                                    }
-            }
 
-            else if(strcmp(command, "r") == 0){
+                else if(strcmp(buffer, "d333333333333333333333333333333333333333333333333333333333333333") == 0){
+                    printf("Safe\n");}
 
-                if(strcmp(buffer, "1737333733333337333333333333333733333333333333333333333333333337") == 0){
-                    printf("Safe\n");
-
-                     
-
-                     printf("Enter speed ('h', 'l') ");
-                     fgets(command, BUFFER_SIZE, stdin);
-                     command[strcspn(command, "\n")] = '\0'; // Remove newline character
-                     SSL_write(ssl, command, strlen(command));
-                     bytes_received =   SSL_read(ssl,buffer,sizeof(buffer)-1);
-                     buffer[bytes_received]= '\0';
-                     printf("recived from client: %s\n",buffer);
-
-                    if(strcmp(command, "h") == 0){
-                        if(strcmp(buffer, "8030333033333330333333333333333033333333333333333333333333333330") == 0){
+               
+                else if(strcmp(buffer, "3a61363133363331333333363333333133333333333333363333333333333331") == 0){
                         printf("Safe\n"); }
-                    else{
-                        printf("Hacked\n");
-                        printf(buffer);
-                        break;
-                                    }
-            }
-                    else if(strcmp(command, "l") == 0){
+                    
 
-                        if(strcmp(buffer, "5737333733333337333333333333333733333333333333333333333333333337") == 0){
-                        printf("Safe\n");
+                else if(strcmp(buffer, "a434333433333334333333333333333433333333333333333333333333333334") == 0){
+                        printf("Safe\n");}
 
-                }
-                        else{
-                             printf("Hacked\n");
-                             printf(buffer);
-                              break;
-                                    }
 
-                }}
+                else if(strcmp(buffer, "4737333733333337333333333333333733333333333333333333333333333337") == 0){
+                    printf("Safe\n"); }
+                else if(strcmp(buffer, "123") == 0){
+                    printf("Safe\n"); }
                 else{
                     printf("Hacked\n");
                     break;
                                     }
-            }
-
             
-            
-            else if(strcmp(command, "q") == 0){
-
-                if(strcmp(buffer, "1c63363333363333333333363333333333333333333333363333333333333333") == 0){
-                    printf("Safe\n");
-                    printf("Quitting\n");
-                    return 0;
-
-                }
-                else{
-                    printf("Hacked\n");
-                    break;
-                                    }
-            }
 
             
             }
