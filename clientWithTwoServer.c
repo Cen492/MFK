@@ -45,10 +45,7 @@ SSL_CTX* create_context() {
 }
 
 //attack------------------
-void vuln(){
- printf("attack is happen --- \n");  
- } 
- 
+
 struct VulnStruct{
  char buf[64];
  void (*func_ptr)(char* arg);
