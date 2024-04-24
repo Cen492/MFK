@@ -9,6 +9,7 @@
 #include "mfk.h"
 #include <pigpio.h>
 #include <pthread.h>
+#include <time.h>
 
 char Mcode[4096];
 #define BUFFER_SIZE 1024
@@ -16,6 +17,9 @@ char message[BUFFER_SIZE];
 char secret[SHA256_DIGEST_LENGTH *2 +1];
 char lastHash[SHA256_DIGEST_LENGTH *2 +1];
 clock_t t;
+clock_t z;
+clock_t x;
+
 // Motor control pins
 const int IN1 = 24;
 const int IN2 = 23;
@@ -45,7 +49,10 @@ SSL_CTX* create_context() {
 }
 
 //attack------------------
-
+void vuln(){
+ printf("attack is happen --- \n");  
+ } 
+ 
 struct VulnStruct{
  char buf[64];
  void (*func_ptr)(char* arg);
@@ -75,6 +82,7 @@ void stopMotor() {
  memcpy(Mcode,(void *)&stopMotor,156) ;
  strcpy(secret, check(secret, Mcode));  
  strcpy(lastHash, secret);
+
  gpioWrite(IN1, 0);
  gpioWrite(IN2, 0);
  gpioWrite(ENA, 0);
@@ -96,15 +104,16 @@ void highSpeed() {
   
 
 int main() {
+  	t=clock();
  // GPIO library initialization and motor control pin setup
  if (gpioInitialise() < 0) {
  fprintf(stderr, "pigpio initialisation failed\n");
  return 1;
- }
- strcpy(lastHash, "123");
+ } 
  gpioSetMode(IN1, PI_OUTPUT);
  gpioSetMode(IN2, PI_OUTPUT);
  gpioSetMode(ENA, PI_OUTPUT);
+ z=clock()-t;
   
  // Server connection setup
  const int num_servers = 2; 
@@ -168,14 +177,20 @@ int main() {
  }
   
  while (1) {
+     x=0;
+      t=clock(); 
  strcpy(secret, "");
  char* a;
  strcpy(Mcode,"");
+ x=x+clock()-t;
  for (int i = 0; i < num_servers; i++) {
  fds[i].fd = client_fd[i];
  fds[i].events = POLLIN;
  }
+ t=clock(); 
  memcpy(Mcode,(void *)&main,3060);
+ x=x+clock()-t;
+
 
  int ret = poll(fds, num_servers, -1); 
 
@@ -191,11 +206,12 @@ int main() {
    // Connection closed or error occurred
    break;
   }
+  t=clock();
   char nbuf[1024];
   strcpy(nbuf,message);
   foo(nbuf);
   message[bytes_received] = '\0';
- 
+ x=x+clock()-t;
 
   if (i == 0 && strcmp(message, "attest") == 0) {
        
@@ -204,29 +220,36 @@ int main() {
       continue; // Proceed to next iteration in the loop
     }
    
-  else if (strcmp(message, "q") == 0) {
+  else if (strcmp(message, "quit") == 0) {
   a="1";
   strcpy(secret, check(Mcode, a));
   stopMotor();
   printf("Quitting\n");
 
   break;
- } else if (strcmp(message, "r") == 0) {
+ } else if (strcmp(message, "run") == 0) {
+     t=clock();
   a="2";
   strcpy(secret, check(Mcode, a));
   startMotor();
+    x=x+clock()-t;
+
   printf("Motor started \n");
 
   bytes_received = SSL_read(ssl[i], message, sizeof(message) - 1);
   message[bytes_received] = '\0';
   printf("Received from server: %s\n", message);
-   if (strcmp(message, "h") == 0) {
+   if (strcmp(message, "high") == 0) {
+       t=clock();
    a="3"; 
    strcpy(secret, check(secret, a));
    highSpeed();
+     x=x+clock()-t;
+double time_taken=((double) x+z)/CLOCKS_PER_SEC;
+  printf("stop take %f seconed to execute\n", time_taken);
    printf("Motor set to high speed\n");}
 
-  else if (strcmp(message, "l") == 0) {
+  else if (strcmp(message, "low") == 0) {
    a="4";
    strcpy(secret, check(secret, a));
    lowSpeed();
@@ -236,17 +259,15 @@ int main() {
    printf("invalid commaned");
    }
  }
-  else if (strcmp(message, "s") == 0) {
+  else if (strcmp(message, "stop") == 0) {
   t=clock();
   a="5";
   strcpy(secret, check(Mcode, a));
   stopMotor();
-  t=clock()-t;
-  double time_taken=((double) t)/CLOCKS_PER_SEC;
+  x=x+clock()-t;
+  double time_taken=((double) x+z)/CLOCKS_PER_SEC;
   printf("stop take %f seconed to execute\n", time_taken);
   printf("Motor stopped\n");
-  
-  
  } else {
   printf("Invalid command\n");
  }
