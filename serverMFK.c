@@ -6,6 +6,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+
 #define PORT 12346
 #define BUFFER_SIZE 1024
 
@@ -92,17 +93,14 @@ int main() {
 
             char command[BUFFER_SIZE];
             while (1) {
-                fgets(command, BUFFER_SIZE, stdin);
-                command[strcspn(command, "\n")] = '\0'; // Remove newline character
-
-                // Send command to client
-                SSL_write(ssl, command, strlen(command));
+                usleep(5000000);
+                SSL_write(ssl, "challenge", strlen("challenge"));
 
                 // Check if it's time to quit
 
-            bytes_received =   SSL_read(ssl,buffer,sizeof(buffer)-1);
-            buffer[bytes_received]= '\0';
-            printf("recived from client: %s\n",buffer);
+             bytes_received =   SSL_read(ssl,buffer,sizeof(buffer)-1);
+             buffer[bytes_received]= '\0';
+             printf("recived from client: %s\n",buffer);
 
                 if(strcmp(buffer, "8a61363133363331333333363333333133333333333333363333333333333331") == 0){
                     printf("Safe\n");
@@ -121,18 +119,17 @@ int main() {
                         printf("Safe\n");}
 
 
-                else if(strcmp(buffer, "4737333733333337333333333333333733333333333333333333333333333337") == 0){
-                    printf("Safe\n"); }
-                else if(strcmp(buffer, "123") == 0){
+                else if(strcmp(buffer, "0535333533333335333333333333333533333333333333333333333333333335") == 0){
                     printf("Safe\n"); }
                 else{
                     printf("Hacked\n");
-                    break;
+                    
                                     }
             
-
+                    
             
             }
+
 
             SSL_shutdown(ssl);
             SSL_free(ssl);
