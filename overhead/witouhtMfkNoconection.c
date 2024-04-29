@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 
-double x=0;
+double time=0;
 struct timeval start , end;
    long seconds;
  long microseconds;
@@ -29,7 +29,7 @@ void startMotor() {
  gettimeofday(&end,0);
   seconds=end.tv_sec-start.tv_sec;
   microseconds=end.tv_usec-start.tv_usec;
- x=x+seconds*1e6 +microseconds;
+ time=time+seconds*1e6 +microseconds;
  }
  
 void stopMotor() {
@@ -52,7 +52,7 @@ void highSpeed() {
   gettimeofday(&end,0);
    seconds=end.tv_sec-start.tv_sec;
   microseconds=end.tv_usec-start.tv_usec;
- x=x+seconds*1e6 +microseconds;
+ time=time+seconds*1e6 +microseconds;
  
  }
   
@@ -74,7 +74,7 @@ int main() {
   gettimeofday(&end,0);
   seconds=end.tv_sec-start.tv_sec;
   microseconds=end.tv_usec-start.tv_usec;
- x=x+seconds*1e6 +microseconds;
+ time=time+seconds*1e6 +microseconds;
   
  //while (1) {
 strcpy(message, "run");
@@ -115,6 +115,6 @@ strcpy(message, "run");
  }
   
  
- printf("-------------- take: %.8f useconds\n", x);
+ printf("-------------- take: %.8f useconds\n", time);
  return 0;
 }
