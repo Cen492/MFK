@@ -11,7 +11,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 
-  double x=0;
+  double time=0;
    struct timeval start , end;
    long seconds;
  long microseconds;
@@ -37,7 +37,7 @@ void startMotor() {
    gettimeofday(&end,0);
   seconds=end.tv_sec-start.tv_sec;
   microseconds=end.tv_usec-start.tv_usec;
- x=x+seconds*1e6 +microseconds; 
+ time=time+seconds*1e6 +microseconds; 
 }
  
 void stopMotor() {
@@ -67,7 +67,7 @@ gettimeofday(&start,0);
     gpioPWM(ENA, 70);
   seconds=end.tv_sec-start.tv_sec;
   microseconds=end.tv_usec-start.tv_usec;
- x=x+seconds*1e6 +microseconds;
+ time=time+seconds*1e6 +microseconds;
 
  
  }
@@ -96,7 +96,7 @@ int main() {
  gettimeofday(&end,0);
   seconds=end.tv_sec-start.tv_sec;
   microseconds=end.tv_usec-start.tv_usec;
- x=x+seconds*1e6 +microseconds;
+ time=time+seconds*1e6 +microseconds;
    
    strcpy(message,"run");
   if (strcmp(message, "quit") == 0) {
@@ -113,7 +113,7 @@ int main() {
   gettimeofday(&end,0);
   seconds=end.tv_sec-start.tv_sec;
   microseconds=end.tv_usec-start.tv_usec;
- x=x+seconds*1e6 +microseconds;
+ time=time+seconds*1e6 +microseconds;
   startMotor();
    
   printf("Motor started \n");
@@ -126,7 +126,7 @@ int main() {
    gettimeofday(&end,0);
   seconds=end.tv_sec-start.tv_sec;
   microseconds=end.tv_usec-start.tv_usec;
- x=x+seconds*1e6 +microseconds;
+ time=time+seconds*1e6 +microseconds;
   highSpeed();
   printf("Motor set to high speed\n");
    }
@@ -155,7 +155,7 @@ int main() {
   
  
  
- printf("-------------- take: %.8f seconds\n", x);
+ printf("-------------- take: %.8f seconds\n", time);
 
  return 0;
 }
