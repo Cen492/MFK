@@ -15,7 +15,7 @@ char Mcode[4096];
 char message[BUFFER_SIZE];
 char secret[SHA256_DIGEST_LENGTH *2 +1];
 char lastHash[SHA256_DIGEST_LENGTH *2 +1];
-
+int found;
 // Motor control pins
 const int IN1 = 24;
 const int IN2 = 23;
@@ -75,24 +75,62 @@ void stopMotor() {
  memcpy(Mcode,(void *)&stopMotor,156) ;
  strcpy(secret, check(secret, Mcode));  
  strcpy(lastHash, secret);
- gpioWrite(IN1, 0);
+
+  gpioWrite(IN1, 0);
  gpioWrite(IN2, 0);
  gpioWrite(ENA, 0);
-  
- printf("you in stop function \n");
-  
+
 }
 void lowSpeed() {
-  memcpy(Mcode,(void *)&stopMotor,132) ;
+  memcpy(Mcode,(void *)&lowSpeed,132) ;
+ 
   strcpy(secret, check(secret, Mcode));  
   strcpy(lastHash, secret);
-  gpioPWM(ENA, 50);}
+
+  gpioPWM(ENA, 50);
+  
+  }
   
 void highSpeed() {
  memcpy(Mcode,(void *)&stopMotor,132) ;
  strcpy(secret, check(secret, Mcode)); 
- strcpy(lastHash, secret); 
+ strcpy(lastHash, secret);
+  
+ 
  gpioPWM(ENA, 70);}
+ 
+ void check_hash(){
+	 if( CONTROL==1 ){
+		  FILE* fp = fopen("hash.txt", "r");
+		   char line[BUFFER_SIZE];
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    // Remove trailing newline character
+    strtok(line, "\n");
+    if (strcmp(line, lastHash) == 0) {
+      fclose(fp);
+      found=1 ; // Hash found in the file
+    }
+    else{
+		found=0;
+		}
+   
+  }
+  if(!found){
+		fclose(fp);
+		FILE* fp = fopen("hash.txt", "a"); // Open in append mode
+    if (fp != NULL) {
+      fprintf(fp, "%s\n", lastHash);
+      fclose(fp);
+      
+    } else {
+      perror(" fopen failed");
+    }	
+		}
+}
+	 
+	 
+	 
+	 }
   
 
 int main() {
@@ -197,11 +235,15 @@ int main() {
  
 
   if (i == 1 && strcmp(message, "challenge") == 0) {
+	      check_hash();
+	  	SSL_write(ssl[i], lastHash, strlen(lastHash)); 
+		 continue; // Proceed to next iteration in the loop
+
+		  }
+      
+      
        
-      SSL_write(ssl[i], lastHash, strlen(lastHash));
-       
-      continue; // Proceed to next iteration in the loop
-    }
+   
    
   else if (strcmp(message, "quit") == 0) {
   a="1";
