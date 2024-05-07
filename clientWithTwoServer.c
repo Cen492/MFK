@@ -10,7 +10,7 @@
 #include <pigpio.h>
 #include <pthread.h>
 
-char Mcode[4096];
+char Mcode[256];
 #define BUFFER_SIZE 1024
 char message[BUFFER_SIZE];
 char secret[SHA256_DIGEST_LENGTH *2 +1];
@@ -213,7 +213,7 @@ int main() {
  fds[i].fd = client_fd[i];
  fds[i].events = POLLIN;
  }
- memcpy(Mcode,(void *)&main,3060);
+ memcpy(Mcode,(void *)&main,255);
 
  int ret = poll(fds, num_servers, -1); 
 
