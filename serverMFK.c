@@ -9,6 +9,28 @@
 
 #define PORT 12346
 #define BUFFER_SIZE 1024
+#define HASH_FILE "hash.txt"
+
+int check_hash_exists(const char* hash) {
+  FILE* fp = fopen(HASH_FILE, "r");
+  if (fp == NULL) {
+    return 0; // File not found or error opening
+  }
+
+  char line[BUFFER_SIZE];
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    // Remove trailing newline character
+    strtok(line, "\n");
+    if (strcmp(line, hash) == 0) {
+      fclose(fp);
+      return 1; // Hash found in the file
+    }
+  }
+
+  fclose(fp);
+  return 0; // Hash not found in the file
+}
+
 
 void init_openssl() {
     SSL_library_init();
@@ -102,22 +124,14 @@ int main() {
              buffer[bytes_received]= '\0';
              printf("recived from client: %s\n",buffer);
 
-                if(strcmp(buffer, "f8473725cc80f431b0ccdb91cf6a52bd88d7d869fb9de13a0b709ce5778720b1") == 0){
-                    printf("Safe\n");
-
-                }
-
-                else if(strcmp(buffer, "e17a37a6ecf39494053471a383ab38b55c79d7be2281c82c00779c866ef32f20") == 0){
-                    printf("Safe\n");}
-
+                if (check_hash_exists(buffer)) {
+             printf("safe\n");
+                // Send appropriate response to client based on valid hash
+              } else {
+              printf("hacked\n");
+                // Send appropriate response to client based on invalid hash
+             }
                
-                else if(strcmp(buffer, "56f203bcd5e969174913b7383ed5627acdd1b7772b8f49786975c73800410506") == 0){
-                        printf("Safe\n"); }
-                    
-                else{
-                    printf("Hacked\n");
-                    
-                                    }
             
                     
             
