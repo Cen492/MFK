@@ -101,7 +101,7 @@ int main() {
  fprintf(stderr, "pigpio initialisation failed\n");
  return 1;
  }
- strcpy(lastHash, "123");
+ strcpy(lastHash, "");
  gpioSetMode(IN1, PI_OUTPUT);
  gpioSetMode(IN2, PI_OUTPUT);
  gpioSetMode(ENA, PI_OUTPUT);
@@ -119,12 +119,12 @@ int main() {
 
  // Define server addresses and ports
  char *server_ips[num_servers];
- server_ips[0] = "172.20.10.8";
  server_ips[1] = "172.20.10.8";
+ server_ips[0] = "172.20.10.8";
 
  int server_ports[num_servers];
- server_ports[0] = 12346;
- server_ports[1] = 12345;
+ server_ports[1] = 12346;
+ server_ports[0] = 12345;
 
  // Connect to each server
  for (int i = 0; i < num_servers; i++) {
@@ -192,26 +192,25 @@ int main() {
    break;
   }
   char nbuf[1024];
-  strcpy(nbuf,message);
-  foo(nbuf);
+ 
   message[bytes_received] = '\0';
  
 
-  if (i == 0 && strcmp(message, "attest") == 0) {
+  if (i == 1 && strcmp(message, "challenge") == 0) {
        
       SSL_write(ssl[i], lastHash, strlen(lastHash));
        
       continue; // Proceed to next iteration in the loop
     }
    
-  else if (strcmp(message, "q") == 0) {
+  else if (strcmp(message, "quit") == 0) {
   a="1";
   strcpy(secret, check(Mcode, a));
   stopMotor();
   printf("Quitting\n");
 
   break;
- } else if (strcmp(message, "r") == 0) {
+ } else if (strcmp(message, "run") == 0) {
   a="2";
   strcpy(secret, check(Mcode, a));
   startMotor();
@@ -219,14 +218,16 @@ int main() {
 
   bytes_received = SSL_read(ssl[i], message, sizeof(message) - 1);
   message[bytes_received] = '\0';
+   strcpy(nbuf,message);
+  foo(nbuf);
   printf("Received from server: %s\n", message);
-   if (strcmp(message, "h") == 0) {
+   if (strcmp(message, "high") == 0) {
    a="3"; 
    strcpy(secret, check(secret, a));
    highSpeed();
    printf("Motor set to high speed\n");}
 
-  else if (strcmp(message, "l") == 0) {
+  else if (strcmp(message, "low") == 0) {
    a="4";
    strcpy(secret, check(secret, a));
    lowSpeed();
@@ -236,7 +237,7 @@ int main() {
    printf("invalid commaned");
    }
  }
-  else if (strcmp(message, "s") == 0) {
+  else if (strcmp(message, "stop") == 0) {
   a="5";
   strcpy(secret, check(Mcode, a));
   stopMotor();
