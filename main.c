@@ -15,6 +15,7 @@ struct test_ctx {
     TEEC_Session sess;
 };
 struct test_ctx ctx;
+
 unsigned char hash[HASH_SIZE]; 
 char Mcode[256]; //to store the machine code
 
@@ -68,7 +69,7 @@ void prepare_tee_session(struct test_ctx *ctx) {
     }
 	/* Open a session with the TA */
     res = TEEC_OpenSession(&ctx->ctx, &ctx->sess, &uuid,
-                           TEEC_LOGIN_PUBLIC, NULL, NULL, &origin);
+         TEEC_LOGIN_PUBLIC, NULL, NULL, &origin);
     if (res != TEEC_SUCCESS) {
         errx(1, "TEEC_Opensession failed with code 0x%x origin 0x%x", res, origin);
     }
@@ -116,8 +117,6 @@ void concatenate_and_hash(struct test_ctx *ctx, const char *input1, const char *
 }
 
 int main(void) {
-    
-
     printf("Preparing TEE session...\n");
     prepare_tee_session(&ctx);
 
@@ -130,11 +129,7 @@ if (gpioInitialise() < 0) {
   gpioSetMode(IN1, PI_OUTPUT);
   gpioSetMode(IN2, PI_OUTPUT);
   gpioSetMode(ENA, PI_OUTPUT);
-
-
-
-
-
+	
   char choice;
 
   while (1) {
@@ -146,24 +141,23 @@ if (gpioInitialise() < 0) {
 
     if (choice == 'r') {
       startMotor();
-      
       printf("Motor started forward\n");
       printf("Press h for high speed, l for low speed: ");
       scanf(" %c", &choice);
     	 if (choice == 'h') {
-      High();  // Adjust high speed value as needed
-      printf("Motor set to high speed\n");
+     	   High();  // Adjust high speed value as needed
+           printf("Motor set to high speed\n");
     } 	else if (choice == 'l') {
-      Low();   // Adjust low speed value as needed
-      printf("Motor set to low speed\n");
+           Low();   // Adjust low speed value as needed
+           printf("Motor set to low speed\n");
       }
-    } else if (choice == 'e') {
-      stopMotor();
-      printf("Motor stopped\n");
-      gpioTerminate();
-      return 0;  // Exit the program
+    }  else if (choice == 'e') {
+           stopMotor();
+           printf("Motor stopped\n");
+           gpioTerminate();
+           return 0;  // Exit the program
     } else {
-      printf("Invalid choice\n");
+          printf("Invalid choice\n");
     }
   }
     
