@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pigpio.h>
+/* OP-TEE TEE client API  */
 #include <tee_client_api.h>
 #include <aes_ta.h>
 
@@ -13,41 +14,59 @@ struct test_ctx {
     TEEC_Context ctx;
     TEEC_Session sess;
 };
-unsigned char hash[HASH_SIZE];
-char dest_str[256];
+struct test_ctx ctx;
+unsigned char hash[HASH_SIZE]; 
+char Mcode[256]; //to store the machine code
 
-
+// Motor control pins
 const int IN1 = 24;
 const int IN2 = 23;
 const int ENA = 25;
 
-// Function to start the motor forward
+// Motor function to start the motor forward
 void startMotor() {
   gpioWrite(IN1, 1);
   gpioWrite(IN2, 0);
+  memcpy(Mcode,(void *)&startMotor,144) ;
+  concatenate_and_hash(&ctx, hash, Mcode);
 }
 
-// Function to set the motor speed
-void setSpeed(int speed) {
-  gpioPWM(ENA, speed);
+
+
+// Motor function to set the motor speed to High
+void High() {
+  gpioPWM(ENA, 100);
+  memcpy(Mcode,(void *)&High,132) ;
+  concatenate_and_hash(&ctx, hash, Mcode);
 }
 
-// Function to stop the motor
+// Motor function to set the motor speed to Low
+void Low() {
+  gpioPWM(ENA, 50);
+  memcpy(Mcode,(void *)&Low,132) ;
+  concatenate_and_hash(&ctx, hash, Mcode);
+}
+
+// Motor function to set the motor speed
 void stopMotor() {
   gpioWrite(IN1, 0);
   gpioWrite(IN2, 0);
+  gpioWrite(ENA, 0);
+  memcpy(Mcode,(void *)&stopMotor,156) ;
+  concatenate_and_hash(&ctx, hash, Mcode);
 }
+
 
 void prepare_tee_session(struct test_ctx *ctx) {
     TEEC_UUID uuid = TA_AES_UUID;
     uint32_t origin;
     TEEC_Result res;
-
+    /* Initialize a context connecting us to the TEE */
     res = TEEC_InitializeContext(NULL, &ctx->ctx);
     if (res != TEEC_SUCCESS) {
         errx(1, "TEEC_InitializeContext failed with code 0x%x", res);
     }
-
+	/* Open a session with the TA */
     res = TEEC_OpenSession(&ctx->ctx, &ctx->sess, &uuid,
                            TEEC_LOGIN_PUBLIC, NULL, NULL, &origin);
     if (res != TEEC_SUCCESS) {
@@ -97,12 +116,12 @@ void concatenate_and_hash(struct test_ctx *ctx, const char *input1, const char *
 }
 
 int main(void) {
-    struct test_ctx ctx;
+    
 
     printf("Preparing TEE session...\n");
     prepare_tee_session(&ctx);
 
-
+//GPIO library initialization and motor control pin setup
 if (gpioInitialise() < 0) {
     fprintf(stderr, "pigpio initialisation failed\n");
     return 1;
@@ -122,29 +141,24 @@ if (gpioInitialise() < 0) {
     printf("Press r for run, e for stop and exit: ");
     scanf(" %c", &choice);
     strcpy(hash, "G");
+    memcpy(Mcode,(void *)&main,256) ;
+    concatenate_and_hash(&ctx, hash, Mcode);
 
     if (choice == 'r') {
       startMotor();
-      memcpy(dest_str,(void *)&startMotor,156) ;
-      concatenate_and_hash(&ctx, hash, dest_str);
+      
       printf("Motor started forward\n");
       printf("Press h for high speed, l for low speed: ");
       scanf(" %c", &choice);
     	 if (choice == 'h') {
-      setSpeed(100);  // Adjust high speed value as needed
-      memcpy(dest_str,(void *)&setSpeed,156) ;
-      concatenate_and_hash(&ctx, hash, dest_str);
+      High();  // Adjust high speed value as needed
       printf("Motor set to high speed\n");
     } 	else if (choice == 'l') {
-      setSpeed(50);   // Adjust low speed value as needed
-      memcpy(dest_str,(void *)&setSpeed,156) ;
-      concatenate_and_hash(&ctx, hash, dest_str);
+      Low();   // Adjust low speed value as needed
       printf("Motor set to low speed\n");
       }
     } else if (choice == 'e') {
       stopMotor();
-      memcpy(dest_str,(void *)&stopMotor,156) ;
-      concatenate_and_hash(&ctx, hash, dest_str);
       printf("Motor stopped\n");
       gpioTerminate();
       return 0;  // Exit the program
@@ -152,10 +166,7 @@ if (gpioInitialise() < 0) {
       printf("Invalid choice\n");
     }
   }
-    printf("Terminating TEE session...\n");
-    terminate_tee_session(&ctx);
-
-    return 0;
+    
 }
 
 
