@@ -28,7 +28,7 @@ void startMotor() {
   gpioWrite(IN1, 1); 
   gpioWrite(IN2, 0);
   memcpy(Mcode,(void *)&startMotor,144) ; //store startMotor Machine code in Mcode
-  concatenate_and_hash(&ctx, hash, Mcode); //concatenate Mcode and hash, tjen hash them and store the value in hash
+  concatenate_and_hash(&ctx, hash, Mcode); //concatenate Mcode and hash, then hash them and store the value in hash
 }
 
 
