@@ -11,7 +11,7 @@
 #define BUFFER_SIZE 1024
 #define HASH_FILE "hash.txt"
 
-int check_hash_exists(const char* hash) {
+int check_hash_exists(const char* hash) { // check if the hash exist in the database
   FILE* fp = fopen(HASH_FILE, "r");
   if (fp == NULL) {
     return 0; // File not found or error opening
@@ -115,7 +115,7 @@ int main() {
 
             char command[BUFFER_SIZE];
             while (1) {
-                usleep(5000000);
+                usleep(5000000); // to send a challenge every 5 seconds 
                 SSL_write(ssl, "challenge", strlen("challenge"));
 
                 // Check if it's time to quit
@@ -124,12 +124,12 @@ int main() {
              buffer[bytes_received]= '\0';
              printf("recived from client: %s\n",buffer);
 
-                if (check_hash_exists(buffer)) {
-             printf("safe\n");
-                // Send appropriate response to client based on valid hash
+                if (check_hash_exists(buffer)) {// check if the recevied hash exist in the database 
+             printf("safe\n"); // if it exisrs print safe
+                
               } else {
-              printf("hacked\n");
-                // Send appropriate response to client based on invalid hash
+              printf("hacked\n");// if the hash value is not in the database print hacked 
+                
              }
                
             
